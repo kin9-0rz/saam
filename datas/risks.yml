@@ -1,0 +1,73 @@
+SMS:
+  - 'SmsManager;->send'
+  - 'abortBroadcast'  
+  - '".*?(s|S)(m|M)(s|S).*?"'
+ROOT:
+  - '".*?su"'
+  - '"su .*?"'
+  - '".*?uperuser.*?"'
+CLICK:
+  - 'performClick'
+  - 'performAction'
+  - 'dispatchTouchEvent'
+URI:
+  - '".*?://.*?"'
+PATH:
+  - '"/.*?"'
+  - '".*?\.(apk|zip|dex|jar)"'
+  - '"&.*?"'
+  - 'Environment;->'
+HideIcon:
+  # void setComponentEnabledSetting (ComponentName componentName, 
+  #               int newState, 
+  #               int flags) 
+  # newState  : 2 COMPONENT_ENABLED_STATE_DISABLED
+  # flags     : 1 DONT_KILL_APP
+  - 'PackageManager;->setComponentEnabledSetting'
+JavaScript:
+  - 'WebView;->addJavascriptInterface'
+  - 'WebView;->loadUrl'
+TIME:
+  # set(int type，long startTime，PendingIntent pi)；
+  # 该方法用于设置一次性闹钟，第一个参数表示闹钟类型，第二个参数表示闹钟执行时间，第三个参数表示闹钟响应动作。
+  - 'AlarmManager;->set'
+  - 'Timer;->schedule'
+  - 'ScheduledExecutorService;->schedule'
+INFO:
+  - 'TelephonyManager;->get'
+Install:
+  - 'install'
+  - '".*? pm .*?"'
+  - '".*?cat .*?"'
+  - 'application/vnd.android.package-archive'
+SHELL:
+  - '"(rm|cat|cp|chmod) .*?"'
+  - 'Runtime;->exec'
+  - 'ProcessBuilder'
+Notification:
+  - 'NotificationManager;->notify'
+Network:
+  - 'HttpURLConnection;->connect'
+  - ';->openConnection'
+IO:
+  - 'AssetManager;->open'
+  - 'Stream;->write'
+  - 'Reader;->read'
+Natvie:
+  - 'System;->loadLibrary\('
+  - 'System;->load\('
+Daemon:
+  - 'android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS'
+  - 'android.settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS'
+  - 'deamon'
+Cipher:
+  - 'Cipher;->doFinal'
+Shortcuts:
+  - 'com.android.launcher.action.INSTALL_SHORTCUT'
+  - 'com.android.launcher.action.UNINSTALL_SHORTCUT'
+REFLECT:
+  - 'ClassLoader;->'
+  - 'Class;->forName'
+  - 'Class;->get'
+  - 'Method;->invoke\('
+
