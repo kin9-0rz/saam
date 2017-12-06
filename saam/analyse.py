@@ -1,23 +1,17 @@
 import argparse
 import json
 import os
-import sys
 import re
-
-
-from adbwrapper import ADB
-from apkutils.apk import APK
-from cigam import Magic
-from cmd2 import Cmd, make_option, options
-from graphviz import Digraph
-from smafile import SmaliDir
-from colorclass.color import Color
+import sys
 
 import pyadb3
+from apkutils.apk import APK
+from cmd2 import Cmd, make_option, options
+from colorclass.color import Color
+from graphviz import Digraph
+from smafile import SmaliDir
 
-
-from . import apktool
-from . import RISKS
+from . import RISKS, apktool
 
 notes = []
 classes = set()
