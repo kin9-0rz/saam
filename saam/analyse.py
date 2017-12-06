@@ -49,18 +49,11 @@ class CmdLineApp(Cmd):
         self._should_quit = True
         return self._STOP_AND_EXIT
 
-        # def do_apk(self, arg):
-        #     pass
-
-        # def do_monitor(self, arg):
-        #     '''
-        #         monitor the app.
-        #     '''
-        #     pass
-
-        # ------------------- Hardware And System  ---------------------
+    # ------------------- Hardware And System  ---------------------
     def do_devinfos(self, arg):
-        '''显示设备硬件信息'''
+        '''
+        显示设备硬件信息
+        '''
         cmd = 'getprop ro.product.brand'
         print('Brand  :', self.adb.shell_command(cmd)[:-1].decode())
         cmd = 'getprop ro.product.model'
@@ -154,7 +147,6 @@ class CmdLineApp(Cmd):
                 print(item.get('type'), item.get('name'))
 
     # ------------------- Static Analysis -------------------------
-
     def do_decompile(self, arg):
         '''
         使用apktool反编译apk
@@ -210,11 +202,18 @@ class CmdLineApp(Cmd):
         if not pflag:
             print()
 
-    def show_risk_code(self):
+    def show_risk_code(self, filters):
         print(Color.red('===== Risk Codes ====='))
         for k, v in RISKS.items():
             kflag = True
             for sf in self.smali_dir:
+                if filters:
+                    for _filter in filters:
+                        if _filter in sf.get_class():
+                            break
+                    else:
+                        continue
+
                 for mtd in sf.get_methods():
                     mflag = True
                     lines = re.split(r'\n\s*', mtd.get_body())
@@ -232,7 +231,7 @@ class CmdLineApp(Cmd):
 
     def do_risk(self, arg):
         self.show_risk_perm()
-        self.show_risk_code()
+        self.show_risk_code(arg.split())
         print(Color.red('\n===== Risk Files ====='))
         self.show_risk_children()
         # so

@@ -1,6 +1,7 @@
 cmd2
 graphviz
-adbwrapper
+pyadb3
 cigam
+smafile
 apkutils
 colorclass
