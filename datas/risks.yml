@@ -1,40 +1,13 @@
 SMS:
   - 'SmsManager;->send'
-  - 'abortBroadcast'  
+  - 'abortBroadcast'
   - '".*?(s|S)(m|M)(s|S).*?"'
+DeviceAdmin:
+ - DeviceAdminReceiver
 ROOT:
   - '".*?su"'
   - '"su .*?"'
   - '".*?uperuser.*?"'
-CLICK:
-  - 'performClick'
-  - 'performAction'
-  - 'dispatchTouchEvent'
-URI:
-  - '".*?://.*?"'
-PATH:
-  - '"/.*?"'
-  - '".*?\.(apk|zip|dex|jar)"'
-  - '"&.*?"'
-  - 'Environment;->'
-HideIcon:
-  # void setComponentEnabledSetting (ComponentName componentName, 
-  #               int newState, 
-  #               int flags) 
-  # newState  : 2 COMPONENT_ENABLED_STATE_DISABLED
-  # flags     : 1 DONT_KILL_APP
-  - 'PackageManager;->setComponentEnabledSetting'
-JavaScript:
-  - 'WebView;->addJavascriptInterface'
-  - 'WebView;->loadUrl'
-TIME:
-  # set(int type，long startTime，PendingIntent pi)；
-  # 该方法用于设置一次性闹钟，第一个参数表示闹钟类型，第二个参数表示闹钟执行时间，第三个参数表示闹钟响应动作。
-  - 'AlarmManager;->set'
-  - 'Timer;->schedule'
-  - 'ScheduledExecutorService;->schedule'
-INFO:
-  - 'TelephonyManager;->get'
 Install:
   - 'install'
   - '".*? pm .*?"'
@@ -44,6 +17,35 @@ SHELL:
   - '"(rm|cat|cp|chmod) .*?"'
   - 'Runtime;->exec'
   - 'ProcessBuilder'
+URI:
+  - '".*?://.*?"'
+PATH:
+  - '"/.*?"'
+  - '".*?\.(apk|zip|dex|jar)"'
+  - '"&.*?"'
+  - 'Environment;->'
+HideIcon:
+  # void setComponentEnabledSetting (ComponentName componentName,
+  #               int newState,
+  #               int flags)
+  # newState  : 2 COMPONENT_ENABLED_STATE_DISABLED
+  # flags     : 1 DONT_KILL_APP
+  - 'PackageManager;->setComponentEnabledSetting'
+JavaScript:
+  - 'WebView;->addJavascriptInterface'
+  - 'WebView;->loadUrl'
+CLICK:
+  - 'performClick'
+  - 'performAction'
+  - 'dispatchTouchEvent'
+TIME:
+  # set(int type，long startTime，PendingIntent pi)；
+  # 该方法用于设置一次性闹钟，第一个参数表示闹钟类型，第二个参数表示闹钟执行时间，第三个参数表示闹钟响应动作。
+  - 'AlarmManager;->set'
+  - 'Timer;->schedule'
+  - 'ScheduledExecutorService;->schedule'
+INFO:
+  - 'TelephonyManager;->get'
 Notification:
   - 'NotificationManager;->notify'
 Network:
@@ -70,4 +72,3 @@ REFLECT:
   - 'Class;->forName'
   - 'Class;->get'
   - 'Method;->invoke\('
-

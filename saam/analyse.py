@@ -199,6 +199,26 @@ class CmdLineApp(Cmd):
                         print(Color.red('===== Risk Permissions ====='))
                         pflag = False
                     print(item.get('@android:name'))
+
+        app = self.apk.get_manifest().get('application')
+        recs = app.get('receiver')
+        if isinstance(recs, dict):
+            perm = recs.get('@android:permission')
+            if '_DEVICE' in perm:
+                if pflag:
+                    print(Color.red('===== Risk Permissions ====='))
+                    pflag = False
+                print(perm, item.get('@android:name'))
+        elif isinstance(recs, list):
+            for item in recs:
+                perm = item.get('@android:permission')
+                if perm and '_DEVICE' in perm:
+                    if pflag:
+                        print(Color.red('===== Risk Permissions ====='))
+                        pflag = False
+                    print(perm, item.get('@android:name'))
+                    break
+
         if not pflag:
             print()
 
