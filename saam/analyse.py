@@ -5,11 +5,12 @@ import re
 import sys
 
 import pyadb3
-from apkutils.apk import APK
 from cmd2 import Cmd, make_option, options
 from colorclass.color import Color
 from graphviz import Digraph
 from smafile import SmaliDir
+
+from apkutils import APK
 
 from . import RISKS, apktool
 
@@ -203,7 +204,7 @@ class CmdLineApp(Cmd):
         app = self.apk.get_manifest().get('application')
         recs = app.get('receiver')
         if isinstance(recs, dict):
-            perm = recs.get('@android:permission')
+            perm = recs.get('@android:permission', '')
             if '_DEVICE' in perm:
                 if pflag:
                     print(Color.red('===== Risk Permissions ====='))
