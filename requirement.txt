@@ -5,3 +5,4 @@ cigam
 smafile
 apkutils
 colorclass
+xmlformatter

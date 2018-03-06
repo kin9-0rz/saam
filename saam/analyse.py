@@ -5,7 +5,9 @@ import re
 import sys
 
 import pyadb3
-from cmd2 import Cmd, make_option, options
+
+from cmd2 import Cmd, with_argparser
+
 from colorclass.color import Color
 from graphviz import Digraph
 from smafile import SmaliDir
@@ -78,9 +80,20 @@ class CmdLineApp(Cmd):
         print('SDK Version   :', self.adb.shell_command(cmd)[:-1].decode())
 
     # ---------------------- Manifest -------------------------
+    @staticmethod
+    def serialize_xml(org_xml):
+        import xmlformatter
+        org_xml = re.sub(r'>[^<]+<', '><', org_xml)
+        
+        formatter = xmlformatter.Formatter()
+        return formatter.format_string(org_xml).decode('utf-8')
+
+
     def do_manifest(self, arg):
         '''显示清单信息'''
-        print(json.dumps(self.apk.get_manifest(), indent=1, sort_keys=True))
+        org_xml = self.apk.get_org_manifest()
+        print(self.serialize_xml(org_xml))
+
 
     def get_package(self):
         return self.apk.get_manifest()['@package']
@@ -133,14 +146,17 @@ class CmdLineApp(Cmd):
             if item.get('type') in ['dex', 'apk', 'elf']:
                 print(item.get('type'), item.get('name'))
 
-    @options([make_option('-a', '--all', action='store_true')])
-    def do_children(self, arg, opts=None):
+    children_parser = argparse.ArgumentParser()
+    children_parser.add_argument('-a', '--all', action='store_true')
+
+    @with_argparser(children_parser)
+    def do_children(self, args):
         '''
         列出APK中的特殊文件
         '''
         self.apk.get_files().sort(key=lambda k: (k.get('type'), k.get('name')))
         for item in self.apk.get_files():
-            if opts.all:
+            if args.all:
                 print(item.get('type'), item.get('name'))
                 continue
 
@@ -295,13 +311,16 @@ class CmdLineApp(Cmd):
     def do_xrefs(self, arg):
         pass
 
-    @options([make_option('-l', '--limit', help='递归次数')])
-    def do_ref(self, args, opts=None):
+    ref_parser = argparse.ArgumentParser()
+    ref_parser.add_argument('-l', '--limit', help='递归次数')
+
+    @with_argparser(ref_parser)
+    def do_ref(self, args):
         if len(args) != 1:
             return
 
-        if opts.limit:
-            recursion_limit = opts.l
+        if args.limit:
+            recursion_limit = args.l
 
         mtd = args[0]
         self.refs(mtd)
@@ -338,27 +357,31 @@ class CmdLineApp(Cmd):
         self.refs(main_acitivity)
         dot.node(main_acitivity)
 
-        recs = self.get_receivers()
-        for item in recs:
-            dot.node(item)
-            self.refs(item)
+        # recs = self.apk.get_receivers()
+        # for item in recs:
+        #     dot.node(item)
+        #     self.refs(item)
 
-        dot.attr('node', shape='box', style='filled',
-                 fillcolor='white', color='black')
+        # dot.attr('node', shape='box', style='filled',
+        #          fillcolor='white', color='black')
 
-        if notes:
-            dot.edges(notes)
-            dot.render('refs.gv', view=True)
+        # if notes:
+        #     dot.edges(notes)
+        #     dot.render('refs.gv', view=True)
 
-        for item in sorted(list(classes)):
-            print(item)
+        # for item in sorted(list(classes)):
+        #     print(item)
 
     # ------------------- Dynamic Analysis -------------------------
-    @options([make_option('-d', '--device', help='目标设备')])
-    def do_adb(self, arg, opts=None):
+    adb_parser = argparse.ArgumentParser()
+    adb_parser.add_argument(
+        '-s', '--serial', help='use device with given serial (overrides $ANDROID_SERIAL)')
+
+    @with_argparser(adb_parser)
+    def do_init_adb(self, args):
         serial = None
-        if opts.device:
-            serial = opts.device
+        if args.serial:
+            serial = args.serial
 
         self.adb = pyadb3.ADB(device=serial)
         if len(self.adb.get_output().decode()) > 10:
@@ -366,19 +389,92 @@ class CmdLineApp(Cmd):
         else:
             print("unable to connect to device.")
 
-    def do_adb_cmd(self, arg):
-        '''执行adb命令'''
+    def do_adb(self, arg):
+        '''
+        执行adb命令
+        '''
+        if not self.adb:
+            self.adb = pyadb3.ADB()
         self.adb.run_cmd(arg)
         print(self.adb.get_output().decode('utf-8', errors='ignore'))
 
-    def do_adb_shell_cmd(self, arg):
-        '''执行adb shell命令'''
-        print(arg)
+    def do_adb_shell(self, arg):
+        '''
+        执行adb shell命令
+        '''
+        if not self.adb:
+            self.adb = pyadb3.ADB()
+
         self.adb.shell_command(arg)
         print(self.adb.get_output().decode('utf-8', errors='ignore'))
+    
+
+    def do_topactivity(self, args):
+        if not self.adb:
+            self.adb = pyadb3.ADB()
+
+        self.adb.shell_command("dumpsys activity activities | grep mFocusedActivity")
+        print(self.adb.get_output().decode('utf-8', errors='ignore').split()[-2])
+    
+    def do_details(self, args):
+        if not self.adb:
+            self.adb = pyadb3.ADB()
+        self.adb.shell_command("dumpsys package {}".format(self.get_package()))
+        print(self.adb.get_output().decode('utf-8', errors='ignore'))
+
+    # ------------------- 应用管理 -------------------------
+    lspkgs_parser = argparse.ArgumentParser()
+    lspkgs_parser.add_argument(
+        '-f', '--file', action='store_true', help='显示应用关联的 apk 文件')
+    lspkgs_parser.add_argument(
+        '-d', '--disabled', action='store_true', help='只显示 disabled 的应用')
+    lspkgs_parser.add_argument('-e', '--enabled', action='store_true',
+                               help='只显示 enabled 的应用')
+    lspkgs_parser.add_argument(
+        '-s', '--system', action='store_true', help='只显示系统应用')
+    lspkgs_parser.add_argument(
+        '-3', '--three', action='store_true', help='只显示第三方应用')
+    lspkgs_parser.add_argument(
+        '-i', '--installer', action='store_true', help='显示应用的 installer')
+    lspkgs_parser.add_argument(
+        '-u', '--uninstall', action='store_true', help='包含已卸载应用')
+    lspkgs_parser.add_argument(
+        'filter', type=str, nargs="?", help='包名包含 < FILTER > 字符串')
+
+    @with_argparser(lspkgs_parser)
+    def do_lspkgs(self, args):
+        '''
+        查看应用列表，默认所有应用
+        '''
+        cmd = 'pm list packages'
+        if args.file:
+            cmd += ' -f'
+
+        if args.disabled:
+            cmd += ' -d'
+        elif args.enabled:
+            cmd += ' -e'
+
+        if args.system:
+            cmd += ' -s'
+        elif args.three:
+            cmd += ' -3'
+
+        if args.installer:
+            cmd += ' -i'
+        elif args.uninstall:
+            cmd += ' -u'
+
+        if args.filter:
+            cmd += ' ' + args.filter
+
+        self.adb.shell_command(cmd)
+        print(self.adb.get_output().decode())
 
     def do_install(self, arg):
-        '''安装应用到手机或模拟器'''
+        '''
+        安装应用到手机或模拟器
+        '''
         self.adb.run_cmd('install -r -f %s' % self.apk_path)
         print(self.adb.get_output())
         output = self.adb.get_output().decode().split()
@@ -390,39 +486,25 @@ class CmdLineApp(Cmd):
             cmd = 'touch %s.now' % self.sdcard
             self.adb.shell_command(cmd)
 
-    def do_set_sdcard(self, arg):
-        '''
-        设置sdcard位置
-        '''
-        if len(arg.split()) != 1:
-            print('Please give one argument to set sdcard path.')
-            return
-        self.sdcard = arg
-
     def do_uninstall(self, arg):
-        '''卸载应用'''
+        '''
+        卸载应用
+        '''
         self.adb.run_cmd('uninstall %s' % self.get_package())
-        # TODO
         self.clearsd()
 
-    @options([make_option('-d', '--debug', action='store_true'),
-              make_option('-e', '--edit', action='store_true')])
-    def do_test(self, arg, opts=None):
+    def clearsd(self):
+        ''' pull the newer files from sdcard.
         '''
-        测试应用（未支持）
-        '''
-        print(arg)
-        print(''.join(arg))
-        if opts.debug:
-            print('debug')
+        cmd = 'find %s -path "%slost+found" -prune -o -type d -print -newer %s.now -delete' % (
+            self.sdcard, self.sdcard, self.sdcard)
+        self.adb.shell_command(cmd)
 
-        # TODO 增加自动化测试
-        # 获取Receiver， 启动
-        # 获取Service，启动
-        # 获取Acitivity，启动
+    startapp_parser = argparse.ArgumentParser()
+    startapp_parser.add_argument('-d', '--debug', action='store_true')
 
-    @options([make_option('-d', '--debug', action='store_true')])
-    def do_runapp(self, arg, opts=None):
+    @with_argparser(startapp_parser)
+    def do_startapp(self, args):
         '''启动应用'''
         main_acitivity = self.get_main_activity()
         if not main_acitivity:
@@ -430,7 +512,7 @@ class CmdLineApp(Cmd):
             return
 
         cmd = 'am start -n %s/%s' % (self.get_package(), main_acitivity)
-        if opts.debug:
+        if args.debug:
             cmd = 'am start -D -n %s/%s' % (self.get_package(), main_acitivity)
         print(cmd)
         self.adb.shell_command(cmd)
@@ -440,14 +522,48 @@ class CmdLineApp(Cmd):
         cmd = 'am force-stop %s' % self.get_package()
         self.adb.shell_command(cmd)
 
-    @options([make_option('-a', '--all', action='store_true')])
-    def do_kill(self, arg, opts):
+    kill_parser = argparse.ArgumentParser()
+    kill_parser.add_argument('-a', '--all', action='store_true')
+
+    @with_argparser(kill_parser)
+    def do_kill(self, args):
         '''杀死应用'''
         cmd = 'am kill %s' % self.get_package()
-        if opts.all:
+        if args.all:
             cmd = 'am kill-all'
         print(cmd)
         self.adb.shell_command(cmd)
+
+    def do_clear(self, args):
+        cmd = 'pm clear {}'.format(self.get_package())
+        self.adb.shell_command(cmd)
+
+    # --------------------------------------------------------
+
+    def do_set_sdcard(self, arg):
+        '''
+        设置sdcard位置
+        '''
+        if len(arg.split()) != 1:
+            print('Please give one argument to set sdcard path.')
+            return
+        self.sdcard = arg
+
+    # @options([make_option('-d', '--debug', action='store_true'),
+    #           make_option('-e', '--edit', action='store_true')])
+    def do_test(self, args):
+        '''
+        测试应用（未支持）
+        '''
+        print(args)
+        print(''.join(args))
+        if args.debug:
+            print('debug')
+
+        # TODO 增加自动化测试
+        # 获取Receiver， 启动
+        # 获取Service，启动
+        # 获取Acitivity，启动
 
     def do_pids(self, arg):
         ''' 显示应用进程'''
@@ -549,13 +665,6 @@ class CmdLineApp(Cmd):
             if not os.path.exists(local_path):
                 os.makedirs(local_path)
             self.adb.run_cmd('pull -a %s %s' % (line, local_path))
-
-    def clearsd(self):
-        ''' pull the newer files from sdcard.
-        '''
-        cmd = 'find %s -path "%slost+found" -prune -o -type d -print -newer %s.now -delete' % (
-            self.sdcard, self.sdcard, self.sdcard)
-        self.adb.shell_command(cmd)
 
     def do_pull(self, arg):
         '''导出样本的所有的运行生成的文件'''
