@@ -84,16 +84,14 @@ class CmdLineApp(Cmd):
     def serialize_xml(org_xml):
         import xmlformatter
         org_xml = re.sub(r'>[^<]+<', '><', org_xml)
-        
+
         formatter = xmlformatter.Formatter()
         return formatter.format_string(org_xml).decode('utf-8')
-
 
     def do_manifest(self, arg):
         '''显示清单信息'''
         org_xml = self.apk.get_org_manifest()
         print(self.serialize_xml(org_xml))
-
 
     def get_package(self):
         return self.apk.get_manifest()['@package']
@@ -407,15 +405,16 @@ class CmdLineApp(Cmd):
 
         self.adb.shell_command(arg)
         print(self.adb.get_output().decode('utf-8', errors='ignore'))
-    
 
     def do_topactivity(self, args):
         if not self.adb:
             self.adb = pyadb3.ADB()
 
-        self.adb.shell_command("dumpsys activity activities | grep mFocusedActivity")
-        print(self.adb.get_output().decode('utf-8', errors='ignore').split()[-2])
-    
+        self.adb.shell_command(
+            "dumpsys activity activities | grep mFocusedActivity")
+        print(self.adb.get_output().decode(
+            'utf-8', errors='ignore').split()[-2])
+
     def do_details(self, args):
         if not self.adb:
             self.adb = pyadb3.ADB()
@@ -476,9 +475,8 @@ class CmdLineApp(Cmd):
         安装应用到手机或模拟器
         '''
         self.adb.run_cmd('install -r -f %s' % self.apk_path)
-        print(self.adb.get_output())
         output = self.adb.get_output().decode().split()
-        print(len(output))
+
         if output[-2] == 'Failure':
             print(output[-1])
         else:
@@ -514,7 +512,7 @@ class CmdLineApp(Cmd):
         cmd = 'am start -n %s/%s' % (self.get_package(), main_acitivity)
         if args.debug:
             cmd = 'am start -D -n %s/%s' % (self.get_package(), main_acitivity)
-        print(cmd)
+
         self.adb.shell_command(cmd)
 
     def do_stopapp(self, arg):
@@ -531,13 +529,38 @@ class CmdLineApp(Cmd):
         cmd = 'am kill %s' % self.get_package()
         if args.all:
             cmd = 'am kill-all'
-        print(cmd)
+
         self.adb.shell_command(cmd)
 
     def do_clear(self, args):
         cmd = 'pm clear {}'.format(self.get_package())
         self.adb.shell_command(cmd)
 
+    def do_screencap(self, args):
+        import time
+        cmd = 'screencap -p /sdcard/{}.png'.format(time.time())
+        if not self.adb:
+            self.adb = pyadb3.ADB()
+
+        self.adb.shell_command(cmd)
+
+    monkey_parser = argparse.ArgumentParser()
+    monkey_parser.add_argument('-v', '--verbose', action='store_true')
+    monkey_parser.add_argument('count', type=int, help="Count")
+
+    @with_argparser(monkey_parser)
+    def do_monkey(self, args):
+        if not self.adb:
+            self.adb = pyadb3.ADB()
+
+        cmd = "monkey -p {} ".format(self.get_package())
+        if args.verbose:
+            cmd += '-v '
+
+        cmd += str(args.count)
+
+        self.adb.shell_command(cmd)
+        print(self.adb.get_output().decode())
     # --------------------------------------------------------
 
     def do_set_sdcard(self, arg):
