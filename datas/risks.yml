@@ -34,16 +34,19 @@ HideIcon:
 JavaScript:
   - 'WebView;->addJavascriptInterface'
   - 'WebView;->loadUrl'
+  - 'WebView;->loadDataWithBaseUrl'
 CLICK:
   - 'performClick'
   - 'performAction'
   - 'dispatchTouchEvent'
+  - 'Click'
 TIME:
   # set(int type，long startTime，PendingIntent pi)；
   # 该方法用于设置一次性闹钟，第一个参数表示闹钟类型，第二个参数表示闹钟执行时间，第三个参数表示闹钟响应动作。
   - 'AlarmManager;->set'
   - 'Timer;->schedule'
   - 'ScheduledExecutorService;->schedule'
+  - 'JobScheduler;->schedule'
 INFO:
   - 'TelephonyManager;->get'
 Notification:
@@ -67,6 +70,10 @@ Cipher:
 Shortcuts:
   - 'com.android.launcher.action.INSTALL_SHORTCUT'
   - 'com.android.launcher.action.UNINSTALL_SHORTCUT'
+View:
+  - ';->addView'
+SharedPreferences:
+  - ';->getSharedPreferences'
 REFLECT:
   - 'ClassLoader;->'
   - 'Class;->forName'

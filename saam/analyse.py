@@ -58,26 +58,26 @@ class CmdLineApp(Cmd):
         显示设备硬件信息
         '''
         cmd = 'getprop ro.product.brand'
-        print('Brand  :', self.adb.shell_command(cmd)[:-1].decode())
+        print('Brand  :', self.adb.run_shell_cmd(cmd)[:-1].decode())
         cmd = 'getprop ro.product.model'
-        print('Model  :', self.adb.shell_command(cmd)[:-1].decode())
+        print('Model  :', self.adb.run_shell_cmd(cmd)[:-1].decode())
         cmd = 'getprop ro.product.device'
-        print('Device :', self.adb.shell_command(cmd)[:-1].decode())
+        print('Device :', self.adb.run_shell_cmd(cmd)[:-1].decode())
         cmd = 'getprop ro.product.cpu.abi'
-        print('CPU    :', self.adb.shell_command(cmd)[:-1].decode())
+        print('CPU    :', self.adb.run_shell_cmd(cmd)[:-1].decode())
         cmd = 'getprop persist.radio.imei'
-        print('IMEI   :', self.adb.shell_command(cmd).decode())
+        print('IMEI   :', self.adb.run_shell_cmd(cmd).decode())
 
     def do_osinfos(self):
         '''显示设备系统信息'''
         cmd = 'getprop ro.build.description'
-        print('Build Desc    :', self.adb.shell_command(cmd)[:-1].decode())
+        print('Build Desc    :', self.adb.run_shell_cmd(cmd)[:-1].decode())
         cmd = 'getprop ro.build.date'
-        print('Build Data    :', self.adb.shell_command(cmd)[:-1].decode())
+        print('Build Data    :', self.adb.run_shell_cmd(cmd)[:-1].decode())
         cmd = 'getprop ro.build.version.release'
-        print('Build Version :', self.adb.shell_command(cmd)[:-1].decode())
+        print('Build Version :', self.adb.run_shell_cmd(cmd)[:-1].decode())
         cmd = 'getprop ro.build.version.sdk'
-        print('SDK Version   :', self.adb.shell_command(cmd)[:-1].decode())
+        print('SDK Version   :', self.adb.run_shell_cmd(cmd)[:-1].decode())
 
     # ---------------------- Manifest -------------------------
     @staticmethod
@@ -164,21 +164,57 @@ class CmdLineApp(Cmd):
     # ------------------- Static Analysis -------------------------
     def do_decompile(self, arg):
         '''
-        使用apktool反编译apk
+        使用apktool反编译apk, 默认初始化清单相关的包。
+
         '''
+        pkgs = self.find_pkg_refx_manifest(self.apk.get_org_manifest())
+        
         apktool.decode(None, self.apk_out, self.apk_path, True)
         for item in os.listdir(self.apk_out):
             if not item.startswith('smali'):
                 continue
-            self.smali_dir = SmaliDir(os.path.join(self.apk_out, item))
+            
+            self.smali_dir = SmaliDir(os.path.join(self.apk_out, item), include=pkgs)
 
-    def do_init_smali(self, arg):
+    @staticmethod
+    def find_pkg_refx_manifest(manifest):
+        '''
+        找出与清单相关的包
+        '''
+        pkgs = set()
+        ptn_s = r'android:name="([^\.]*?\.[^\.]*?)\..*?"'
+        ptn = re.compile(ptn_s)
+        for item in ptn.finditer(manifest):
+            pkgs.add(item.groups()[0])
+
+        pkgs.remove("android.intent")
+        pkgs.remove("android.permission")
+
+        return pkgs
+
+    init_smali_argparser = argparse.ArgumentParser()
+    init_smali_argparser.add_argument(
+        '-m', '--manifest', action='store_true', help='根据manifest相关包初始化')
+    init_smali_argparser.add_argument(
+        '-f', '--filter', action='store_true', help='根据过滤列表初始化')
+
+    @with_argparser(init_smali_argparser)
+    def do_init_smali(self, args):
+        '''
+        初始化smali，默认初始化所有
+
+        '''
+        pkgs = None
+
+        if args.manifest:
+            pkgs = self.find_pkg_refx_manifest(self.apk.get_org_manifest())
+
         self.smali_dir = None
         for item in os.listdir(self.apk_out):
             if not item.startswith('smali'):
                 continue
 
-            sd = SmaliDir(os.path.join(self.apk_out, item))
+            sd = SmaliDir(os.path.join(self.apk_out, item), include=pkgs)
             if self.smali_dir:
                 self.smali_dir[len(self.smali_dir):] = sd
             else:
@@ -266,6 +302,7 @@ class CmdLineApp(Cmd):
 
     def do_risk(self, arg):
         self.show_risk_perm()
+        # TODO 是否需要过滤？
         self.show_risk_code(arg.split())
         print(Color.red('\n===== Risk Files ====='))
         self.show_risk_children()
@@ -370,7 +407,7 @@ class CmdLineApp(Cmd):
         # for item in sorted(list(classes)):
         #     print(item)
 
-    # ------------------- Dynamic Analysis -------------------------
+    # ------------------- ADB -------------------------
     adb_parser = argparse.ArgumentParser()
     adb_parser.add_argument(
         '-s', '--serial', help='use device with given serial (overrides $ANDROID_SERIAL)')
@@ -403,14 +440,14 @@ class CmdLineApp(Cmd):
         if not self.adb:
             self.adb = pyadb3.ADB()
 
-        self.adb.shell_command(arg)
+        self.adb.run_shell_cmd(arg)
         print(self.adb.get_output().decode('utf-8', errors='ignore'))
 
     def do_topactivity(self, args):
         if not self.adb:
             self.adb = pyadb3.ADB()
 
-        self.adb.shell_command(
+        self.adb.run_shell_cmd(
             "dumpsys activity activities | grep mFocusedActivity")
         print(self.adb.get_output().decode(
             'utf-8', errors='ignore').split()[-2])
@@ -418,8 +455,10 @@ class CmdLineApp(Cmd):
     def do_details(self, args):
         if not self.adb:
             self.adb = pyadb3.ADB()
-        self.adb.shell_command("dumpsys package {}".format(self.get_package()))
+        self.adb.run_shell_cmd("dumpsys package {}".format(self.get_package()))
         print(self.adb.get_output().decode('utf-8', errors='ignore'))
+
+    # ------------------- 备份还原 -------------------------
 
     # ------------------- 应用管理 -------------------------
     lspkgs_parser = argparse.ArgumentParser()
@@ -467,7 +506,7 @@ class CmdLineApp(Cmd):
         if args.filter:
             cmd += ' ' + args.filter
 
-        self.adb.shell_command(cmd)
+        self.adb.run_shell_cmd(cmd)
         print(self.adb.get_output().decode())
 
     def do_install(self, arg):
@@ -482,7 +521,7 @@ class CmdLineApp(Cmd):
         else:
             # TODO if the sdcard path doesn't exist.
             cmd = 'touch %s.now' % self.sdcard
-            self.adb.shell_command(cmd)
+            self.adb.run_shell_cmd(cmd)
 
     def do_uninstall(self, arg):
         '''
@@ -496,10 +535,11 @@ class CmdLineApp(Cmd):
         '''
         cmd = 'find %s -path "%slost+found" -prune -o -type d -print -newer %s.now -delete' % (
             self.sdcard, self.sdcard, self.sdcard)
-        self.adb.shell_command(cmd)
+        self.adb.run_shell_cmd(cmd)
 
     startapp_parser = argparse.ArgumentParser()
     startapp_parser.add_argument('-d', '--debug', action='store_true')
+    # TODO strace
 
     @with_argparser(startapp_parser)
     def do_startapp(self, args):
@@ -513,12 +553,12 @@ class CmdLineApp(Cmd):
         if args.debug:
             cmd = 'am start -D -n %s/%s' % (self.get_package(), main_acitivity)
 
-        self.adb.shell_command(cmd)
+        self.adb.run_shell_cmd(cmd)
 
     def do_stopapp(self, arg):
         '''停止应用'''
         cmd = 'am force-stop %s' % self.get_package()
-        self.adb.shell_command(cmd)
+        self.adb.run_shell_cmd(cmd)
 
     kill_parser = argparse.ArgumentParser()
     kill_parser.add_argument('-a', '--all', action='store_true')
@@ -530,11 +570,11 @@ class CmdLineApp(Cmd):
         if args.all:
             cmd = 'am kill-all'
 
-        self.adb.shell_command(cmd)
+        self.adb.run_shell_cmd(cmd)
 
     def do_clear(self, args):
         cmd = 'pm clear {}'.format(self.get_package())
-        self.adb.shell_command(cmd)
+        self.adb.run_shell_cmd(cmd)
 
     def do_screencap(self, args):
         import time
@@ -542,7 +582,7 @@ class CmdLineApp(Cmd):
         if not self.adb:
             self.adb = pyadb3.ADB()
 
-        self.adb.shell_command(cmd)
+        self.adb.run_shell_cmd(cmd)
 
     monkey_parser = argparse.ArgumentParser()
     monkey_parser.add_argument('-v', '--verbose', action='store_true')
@@ -559,7 +599,7 @@ class CmdLineApp(Cmd):
 
         cmd += str(args.count)
 
-        self.adb.shell_command(cmd)
+        self.adb.run_shell_cmd(cmd)
         print(self.adb.get_output().decode())
     # --------------------------------------------------------
 
@@ -590,12 +630,12 @@ class CmdLineApp(Cmd):
 
     def do_pids(self, arg):
         ''' 显示应用进程'''
-        print(self.adb.shell_command('ps | grep %s' % self.get_package()))
+        print(self.adb.run_shell_cmd('ps | grep %s' % self.get_package()))
 
     def lsof(self):
         axml = self.apk.get_manifest()
         if axml:
-            lines = self.adb.shell_command('ps | grep %s' %
+            lines = self.adb.run_shell_cmd('ps | grep %s' %
                                            axml.getPackageName()).decode()
             if not lines:
                 return
@@ -604,7 +644,7 @@ class CmdLineApp(Cmd):
                 pids.append(line.split()[1])
 
             for pid in pids:
-                self.adb.shell_command('lsof | grep %s' % pid)
+                self.adb.run_shell_cmd('lsof | grep %s' % pid)
                 lines = self.adb.get_output().decode().split('\r\r\n').decode()
                 for line in lines:
                     # print(line)
@@ -619,7 +659,7 @@ class CmdLineApp(Cmd):
                     print(line)
                     filename = tmps[8].replace('/', '_')
                     print('%s %s' % (fdno, filename))
-                    self.adb.shell_command(
+                    self.adb.run_shell_cmd(
                         "cat /proc/%s/fd/%s > /storage/sdcard0/%s" % (pid, fdno, filename))
                     self.adb.run_cmd(
                         'pull -a -p /storage/sdcard0/%s' % filename)
@@ -628,7 +668,7 @@ class CmdLineApp(Cmd):
         '''列出SDCARD新增的文件'''
         command = ('find /storage/sdcard0 -path "/storage/sdcard0/lost+found"'
                    ' -prune -o -type f -print -newer /storage/sdcard0/.now')
-        self.adb.shell_command(command)
+        self.adb.run_shell_cmd(command)
         print(self.adb.get_output().decode())
 
     def pulldata(self):
@@ -636,9 +676,9 @@ class CmdLineApp(Cmd):
             pull /data/data/pkg
         '''
         pkg = self.get_package()
-        self.adb.shell_command('cp -r /data/data/%s /storage/sdcard0' % pkg)
+        self.adb.run_shell_cmd('cp -r /data/data/%s /storage/sdcard0' % pkg)
         # self.adb.run_cmd('pull -a -p /storage/sdcard0/%s %s' % (pkg, pkg))
-        # self.adb.shell_command('rm -r /storage/sdcard0/%s' % pkg)
+        # self.adb.run_shell_cmd('rm -r /storage/sdcard0/%s' % pkg)
 
     def pullsd(self):
         '''
@@ -648,7 +688,7 @@ class CmdLineApp(Cmd):
             'find /storage/sdcard0 -path "/storage/sdcard0/lost+found"'
             ' -prune -o -type f -print -newer /storage/sdcard0/.now'
         )
-        ret = self.adb.shell_command(command).decode()
+        ret = self.adb.run_shell_cmd(command).decode()
 
         dir_set = set([])
         import os
@@ -694,7 +734,8 @@ class CmdLineApp(Cmd):
         self.pulldata()
         self.pullsd()
 
-    # ----------------------------- Memory -----------------------------
+    # ----------------------------- 内存操作 -----------------------------
+    # 内存字符串查看？内存字符串修改？
     def do_memview(self, arg):
         '''查看内存分布'''
         if not self.maps:
@@ -704,16 +745,16 @@ class CmdLineApp(Cmd):
 
     def get_maps(self):
         pkg = self.get_package()
-        lines = self.adb.shell_command('ps | grep %s' % pkg).decode()
+        lines = self.adb.run_shell_cmd('ps | grep %s' % pkg).decode()
         pids = []
         for line in lines.strip().split('\r\r\n'):
             pids.append(line.split()[1])
 
         for pid in pids:
-            lines = self.adb.shell_command('ls /proc/%s/task/' % pid)
+            lines = self.adb.run_shell_cmd('ls /proc/%s/task/' % pid)
             clone = lines.decode().split()[-1]
             cmd = 'cat /proc/%s/maps' % clone
-            self.adb.shell_command(cmd).decode()
+            self.adb.run_shell_cmd(cmd).decode()
             self.maps = self.adb.get_output().decode()
 
     def memdump(self, arg):
@@ -739,28 +780,7 @@ class CmdLineApp(Cmd):
         #     "-ex 'dump memory /data/local/tmp/dump.dex "
         #     "$DEX_START 0x$MEMORY_END'")
 
-        # self.adb.shell_command(command)
-
-    # # Get rid of commands or command aliases we don't want
-    # del Cmd.do_load
-    # # del Cmd.do__load
-    # del Cmd.do__relative_load
-    # # del Cmd.do_pause
-    # del Cmd.do_run
-    # # del Cmd.do_r
-    # # del Cmd.do_list
-    # # del Cmd.do_l
-    # # del Cmd.do_li
-    # del Cmd.do_cmdenvironment
-    # del Cmd.do_edit
-    # # del Cmd.do_ed
-    # del Cmd.do_history
-    # # del Cmd.do_hi
-    # del Cmd.do_py
-    # del Cmd.do_save
-    # # del Cmd.do_EOF
-    # del Cmd.do_eof
-    # del Cmd.do_set
+        # self.adb.run_shell_cmd(command)
 
 
 if __name__ == '__main__':
