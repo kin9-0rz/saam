@@ -413,7 +413,10 @@ class CmdLineApp(Cmd):
         '-s', '--serial', help='use device with given serial (overrides $ANDROID_SERIAL)')
 
     @with_argparser(adb_parser)
-    def do_init_adb(self, args):
+    def do_adb_ready(self, args):
+        '''
+        连接设备/模拟器，准备adb命令。
+        '''
         serial = None
         if args.serial:
             serial = args.serial
@@ -539,7 +542,20 @@ class CmdLineApp(Cmd):
 
     startapp_parser = argparse.ArgumentParser()
     startapp_parser.add_argument('-d', '--debug', action='store_true')
-    # TODO strace
+
+    def do_strace(self, args):
+        '''
+        使用 strace 启动应用
+        setenforce 0  # In Android 4.3 and later, if SELinux is enabled, strace will fail with "strace: wait: Permission denied"
+
+        有两种方式：
+        1. 使用调试的方式启动应用，strace -p $pid
+        2. trace -p $zygote_pid，启动应用
+        '''
+        # cmd = "strace -f -p `ps | grep zygote | awk '{print $2}'`"
+        print(self.sdcard)
+        cmd = "set `ps | grep zygote`; strace -p $2 -f -tt -T -s 500 -o {}strace.txt".format(self.sdcard)
+        self.adb.run_shell_cmd(cmd)
 
     @with_argparser(startapp_parser)
     def do_startapp(self, args):
@@ -629,7 +645,9 @@ class CmdLineApp(Cmd):
         # 获取Acitivity，启动
 
     def do_pids(self, arg):
-        ''' 显示应用进程'''
+        '''
+        显示应用进程
+        '''
         print(self.adb.run_shell_cmd('ps | grep %s' % self.get_package()))
 
     def lsof(self):
@@ -790,5 +808,5 @@ if __name__ == '__main__':
 
     sys.argv.remove(args.f)
 
-    c = CmdLineApp(args.f)
-    c.cmdloop()
+    CmdLineApp(args.f).cmdloop()
+

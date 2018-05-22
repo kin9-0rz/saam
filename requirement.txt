@@ -6,3 +6,4 @@ smafile
 apkutils
 colorclass
 xmlformatter
+PyYAML
