@@ -545,7 +545,7 @@ class CmdLineApp(Cmd):
 
     def do_strace(self, args):
         '''
-        使用 strace 启动应用
+        使用 strace 跟踪应用
         setenforce 0  # In Android 4.3 and later, if SELinux is enabled, strace will fail with "strace: wait: Permission denied"
 
         有两种方式：
