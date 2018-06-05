@@ -1,81 +1,125 @@
 SMS:
-  - 'SmsManager;->send'
-  - 'abortBroadcast'
-  - '".*?(s|S)(m|M)(s|S).*?"'
+  lvl: 3
+  code:
+    - 'SmsManager;->send'
+    - 'abortBroadcast'
+    - '".*?(s|S)(m|M)(s|S).*?"'
 DeviceAdmin:
- - DeviceAdminReceiver
+  lvl: 3
+  code:
+    - DeviceAdminReceiver
 ROOT:
-  - '".*?su"'
-  - '"su .*?"'
-  - '".*?uperuser.*?"'
+  lvl: 3
+  code:
+    - '".*?su"'
+    - '"su .*?"'
+    - '".*?uperuser.*?"'
 Install:
-  - 'install'
-  - '".*? pm .*?"'
-  - '".*?cat .*?"'
-  - 'application/vnd.android.package-archive'
+  lvl: 3
+  code:
+    - 'install'
+    - '".*? pm .*?"'
+    - '".*?cat .*?"'
+    - 'application/vnd.android.package-archive'
 SHELL:
-  - '"(rm|cat|cp|chmod) .*?"'
-  - 'Runtime;->exec'
-  - 'ProcessBuilder'
+  lvl: 3
+  code:
+    - '"(rm|cat|cp|chmod) .*?"'
+    - 'Runtime;->exec'
+    - 'ProcessBuilder'
 URI:
-  - '".*?://.*?"'
+  lvl: 3
+  code:
+    - '".*?://.*?"'
 PATH:
-  - '"/.*?"'
-  - '".*?\.(apk|zip|dex|jar)"'
-  - '"&.*?"'
-  - 'Environment;->'
+  lvl: 3
+  code:
+    - '"/.*?"'
+    - '".*?\.(apk|zip|dex|jar)"'
+    - '"&.*?"'
+    - 'Environment;->'
 HideIcon:
-  # void setComponentEnabledSetting (ComponentName componentName,
-  #               int newState,
-  #               int flags)
-  # newState  : 2 COMPONENT_ENABLED_STATE_DISABLED
-  # flags     : 1 DONT_KILL_APP
-  - 'PackageManager;->setComponentEnabledSetting'
+  lvl: 3
+  code:
+    # void setComponentEnabledSetting (ComponentName componentName,
+    #               int newState,
+    #               int flags)
+    # newState  : 2 COMPONENT_ENABLED_STATE_DISABLED
+    # flags     : 1 DONT_KILL_APP
+    - 'PackageManager;->setComponentEnabledSetting'
 JavaScript:
-  - 'WebView;->addJavascriptInterface'
-  - 'WebView;->loadUrl'
-  - 'WebView;->loadDataWithBaseUrl'
+  lvl: 3
+  code:
+    - 'WebView;->addJavascriptInterface'
+    - 'WebView;->loadUrl'
+    - 'WebView;->loadDataWithBaseUrl'
 CLICK:
-  - 'performClick'
-  - 'performAction'
-  - 'dispatchTouchEvent'
-  - 'Click'
+  lvl: 2
+  code:
+    - 'performClick'
+    - 'performAction'
+    - 'dispatchTouchEvent'
+    - 'Click'
 TIME:
-  # set(int type，long startTime，PendingIntent pi)；
-  # 该方法用于设置一次性闹钟，第一个参数表示闹钟类型，第二个参数表示闹钟执行时间，第三个参数表示闹钟响应动作。
-  - 'AlarmManager;->set'
-  - 'Timer;->schedule'
-  - 'ScheduledExecutorService;->schedule'
-  - 'JobScheduler;->schedule'
+  lvl: 1
+  code:
+    # set(int type，long startTime，PendingIntent pi)；
+    # 该方法用于设置一次性闹钟，第一个参数表示闹钟类型，第二个参数表示闹钟执行时间，第三个参数表示闹钟响应动作。
+    - 'AlarmManager;->set'
+    - 'Timer;->schedule'
+    - 'ScheduledExecutorService;->schedule'
+    - 'JobScheduler;->schedule'
 INFO:
-  - 'TelephonyManager;->get'
+  lvl: 1
+  code:
+    - 'TelephonyManager;->get'
 Notification:
-  - 'NotificationManager;->notify'
+  lvl: 2
+  code:
+    - 'NotificationManager;->notify'
 Network:
-  - 'HttpURLConnection;->connect'
-  - ';->openConnection'
+  lvl: 1
+  code:
+    - 'HttpURLConnection;->connect'
+    - ';->openConnection'
 IO:
-  - 'AssetManager;->open'
-  - 'Stream;->write'
-  - 'Reader;->read'
+  lvl: 1
+  code:
+    - 'AssetManager;->open'
+    - 'Stream;->write'
+    - 'Reader;->read'
 Natvie:
-  - 'System;->loadLibrary\('
-  - 'System;->load\('
+  lvl: 1
+  code:
+    - 'System;->loadLibrary\('
+    - 'System;->load\('
 Daemon:
-  - 'android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS'
-  - 'android.settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS'
-  - 'deamon'
+  lvl: 0
+  code:
+    - 'android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS'
+    - 'android.settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS'
+    - 'deamon'
 Cipher:
-  - 'Cipher;->doFinal'
+  lvl: 0
+  code:
+    - 'Cipher;->doFinal'
 Shortcuts:
-  - 'com.android.launcher.action.INSTALL_SHORTCUT'
-  - 'com.android.launcher.action.UNINSTALL_SHORTCUT'
+  lvl: 1
+  code:
+    - 'com.android.launcher.action.INSTALL_SHORTCUT'
+    - 'com.android.launcher.action.UNINSTALL_SHORTCUT'
 View:
-  - ';->addView'
+  lvl: 1
+  code:
+    - ';->addView'
 SharedPreferences:
-  - ';->getSharedPreferences'
+  lvl: 0
+  code:
+    - ';->getSharedPreferences'
 REFLECT:
-  - 'ClassLoader;->'
-  - 'Class;->forName'
-  - 'Class;->get'
-  - 'Method;->invoke\('
+  lvl: 0
+  code:
+    - 'ClassLoader;->'
+    - 'Class;->forName'
+    - 'Class;->get'
+    - 'Method;->invoke\('

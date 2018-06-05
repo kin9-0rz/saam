@@ -135,14 +135,24 @@ class CmdLineApp(Cmd):
         print(json.dumps(receivers, indent=4, sort_keys=True))
 
     def show_risk_children(self, flag=False):
+        result = ''
+        pflag = True
         self.apk.get_files().sort(key=lambda k: (k.get('type'), k.get('name')))
         for item in self.apk.get_files():
             if flag:
                 print(item.get('type'), item.get('name'))
                 continue
 
-            if item.get('type') in ['dex', 'apk', 'elf']:
-                print(item.get('type'), item.get('name'))
+            if item.get('type') not in ['dex', 'apk', 'elf']:
+                continue
+            
+            if pflag:
+                result = Color.red('\n===== Risk Files =====\n')
+                pflag = False
+
+            result += item.get('type') + ' ' + item.get('name') + '\n'
+        
+        return result
 
     children_parser = argparse.ArgumentParser()
     children_parser.add_argument('-a', '--all', action='store_true')
@@ -233,8 +243,9 @@ class CmdLineApp(Cmd):
         pass
 
     def show_risk_perm(self):
+        result = ''
         if not self.apk.get_manifest():
-            return
+            return result
         risk_perms = [
             '_SMS',
             '_CALL',
@@ -242,70 +253,95 @@ class CmdLineApp(Cmd):
             '_AUDIO',
             '_CONTACTS'
         ]
+        ps = set()
         pflag = True
         for item in self.apk.get_manifest().get('uses-permission', []):
             for perm in risk_perms:
-                if perm in item.get('@android:name'):
-                    if pflag:
-                        print(Color.red('===== Risk Permissions ====='))
-                        pflag = False
-                    print(item.get('@android:name'))
+                if perm not in item.get('@android:name'):
+                    continue
+          
+                if pflag:
+                    result += Color.red('===== Risk Permissions =====\n')
+                    pflag = False
+                
+                name = item.get('@android:name')
+                if name in ps:
+                    continue
+                result += name + '\n'
+                ps.add(name)
+
+
 
         app = self.apk.get_manifest().get('application')
         recs = app.get('receiver')
+
+        def process_item(item):
+            text = ''
+            perm = item.get('@android:permission', '')
+            if '_DEVICE' not in perm:
+                return text
+            if pflag:
+                text += Color.red('===== Risk Permissions =====\n')
+            text += perm + item.get('@android:name') + '\n'
+
         if isinstance(recs, dict):
-            perm = recs.get('@android:permission', '')
-            if '_DEVICE' in perm:
-                if pflag:
-                    print(Color.red('===== Risk Permissions ====='))
-                    pflag = False
-                print(perm, item.get('@android:name'))
+            text = process_item(item)
+            if text:
+                result += text
+                pflag = False
         elif isinstance(recs, list):
             for item in recs:
-                perm = item.get('@android:permission')
-                if perm and '_DEVICE' in perm:
-                    if pflag:
-                        print(Color.red('===== Risk Permissions ====='))
-                        pflag = False
-                    print(perm, item.get('@android:name'))
+                text = process_item(item)
+                if text:
+                    result += text
+                    pflag = False
                     break
 
         if not pflag:
-            print()
+            result += '\n'
+        
+        return result
 
-    def show_risk_code(self, filters):
-        print(Color.red('===== Risk Codes ====='))
+
+    def show_risk_code(self, level):
+        result = Color.red('===== Risk Codes =====')
         for k, v in RISKS.items():
+            if v['lvl'] < level:
+                continue
             kflag = True
             for sf in self.smali_dir:
-                if filters:
-                    for _filter in filters:
-                        if _filter in sf.get_class():
-                            break
-                    else:
-                        continue
-
                 for mtd in sf.get_methods():
                     mflag = True
                     lines = re.split(r'\n\s*', mtd.get_body())
                     for idx, line in enumerate(lines):
-                        for ptn in v:
+                        for ptn in v['code']:
                             if re.search(ptn, line):
                                 if kflag:
-                                    print(Color.magenta('---' + k + '---'))
+                                    result += Color.magenta('---' + k + '---\n')
                                     kflag = False
                                 if mflag:
-                                    print(Color.green(' ' + str(mtd)))
+                                    result += Color.green(' ' + str(mtd)) + '\n'
                                     mflag = False
-                                print(' ' * 3, idx, line)
+                                result += ' ' * 3 + str(idx) + line + '\n'
                                 break
+        
+        return result
 
-    def do_risk(self, arg):
-        self.show_risk_perm()
-        # TODO 是否需要过滤？
-        self.show_risk_code(arg.split())
-        print(Color.red('\n===== Risk Files ====='))
-        self.show_risk_children()
+    risk_parser = argparse.ArgumentParser()
+    risk_parser.add_argument('-l', '--level', help='指定风险级别，0/1/2/3，0为最低级别，3为最高级别')
+    @with_argparser(risk_parser)
+    def do_risk(self, args):
+        text = ''
+        text += self.show_risk_perm()
+
+        level = 3
+        if args.level:
+            level = int(args.level)
+
+        text += self.show_risk_code(level)
+        text += self.show_risk_children()
+
+        self.ppaged(text)
         # so
         # 文本
         # 二进制文件
