@@ -23,3 +23,6 @@ APKTOOL_PATH = __APKTOOL_CONF if __APKTOOL_CONF else __APKTOOL_DEFAULT
 RISKS_PATH = os.path.join(HOME, 'datas', 'risks.yml')
 with open(RISKS_PATH, encoding='utf-8') as f:
     RISKS = yaml.load(f.read())
+
+YARA_PATH = os.path.join(HOME, 'rules')
+YARAC_PATH = os.path.join(HOME, 'rules', 'rules.yarc')

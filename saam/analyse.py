@@ -304,7 +304,7 @@ class CmdLineApp(Cmd):
 
 
     def show_risk_code(self, level):
-        result = Color.red('===== Risk Codes =====')
+        result = Color.red('===== Risk Codes =====\n')
         for k, v in RISKS.items():
             if v['lvl'] < level:
                 continue
@@ -329,8 +329,14 @@ class CmdLineApp(Cmd):
 
     risk_parser = argparse.ArgumentParser()
     risk_parser.add_argument('-l', '--level', help='指定风险级别，0/1/2/3，0为最低级别，3为最高级别')
+    risk_parser.add_argument('-f', '--force', action='store_true', help='强制覆盖已有文件')
+    
     @with_argparser(risk_parser)
     def do_risk(self, args):
+        if os.path.exists(self.apk_path + '.risk.txt'):
+            if not args.force:
+                # TODO read file
+                return
         text = ''
         text += self.show_risk_perm()
 
@@ -340,7 +346,7 @@ class CmdLineApp(Cmd):
 
         text += self.show_risk_code(level)
         text += self.show_risk_children()
-
+        # TODO save to file 
         self.ppaged(text)
         # so
         # 文本
