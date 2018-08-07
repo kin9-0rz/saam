@@ -5,14 +5,11 @@ import re
 import sys
 
 import pyadb3
-
+from apkutils import APK
 from cmd2 import Cmd, with_argparser
-
 from colorclass.color import Color
 from graphviz import Digraph
 from smafile import SmaliDir
-
-from apkutils import APK
 
 from . import RISKS, apktool
 
@@ -145,13 +142,13 @@ class CmdLineApp(Cmd):
 
             if item.get('type') not in ['dex', 'apk', 'elf']:
                 continue
-            
+
             if pflag:
                 result = Color.red('\n===== Risk Files =====\n')
                 pflag = False
 
             result += item.get('type') + ' ' + item.get('name') + '\n'
-        
+
         return result
 
     children_parser = argparse.ArgumentParser()
@@ -178,13 +175,14 @@ class CmdLineApp(Cmd):
 
         '''
         pkgs = self.find_pkg_refx_manifest(self.apk.get_org_manifest())
-        
+
         apktool.decode(None, self.apk_out, self.apk_path, True)
         for item in os.listdir(self.apk_out):
             if not item.startswith('smali'):
                 continue
-            
-            self.smali_dir = SmaliDir(os.path.join(self.apk_out, item), include=pkgs)
+
+            self.smali_dir = SmaliDir(os.path.join(
+                self.apk_out, item), include=pkgs)
 
     @staticmethod
     def find_pkg_refx_manifest(manifest):
@@ -259,18 +257,16 @@ class CmdLineApp(Cmd):
             for perm in risk_perms:
                 if perm not in item.get('@android:name'):
                     continue
-          
+
                 if pflag:
                     result += Color.red('===== Risk Permissions =====\n')
                     pflag = False
-                
+
                 name = item.get('@android:name')
                 if name in ps:
                     continue
                 result += name + '\n'
                 ps.add(name)
-
-
 
         app = self.apk.get_manifest().get('application')
         recs = app.get('receiver')
@@ -299,9 +295,8 @@ class CmdLineApp(Cmd):
 
         if not pflag:
             result += '\n'
-        
-        return result
 
+        return result
 
     def show_risk_code(self, level):
         result = Color.red('===== Risk Codes =====\n')
@@ -317,20 +312,24 @@ class CmdLineApp(Cmd):
                         for ptn in v['code']:
                             if re.search(ptn, line):
                                 if kflag:
-                                    result += Color.magenta('---' + k + '---\n')
+                                    result += Color.magenta('---' +
+                                                            k + '---\n')
                                     kflag = False
                                 if mflag:
-                                    result += Color.green(' ' + str(mtd)) + '\n'
+                                    result += Color.green(' ' +
+                                                          str(mtd)) + '\n'
                                     mflag = False
                                 result += ' ' * 3 + str(idx) + line + '\n'
                                 break
-        
+
         return result
 
     risk_parser = argparse.ArgumentParser()
-    risk_parser.add_argument('-l', '--level', help='指定风险级别，0/1/2/3，0为最低级别，3为最高级别')
-    risk_parser.add_argument('-f', '--force', action='store_true', help='强制覆盖已有文件')
-    
+    risk_parser.add_argument(
+        '-l', '--level', help='指定风险级别，0/1/2/3，0为最低级别，3为最高级别')
+    risk_parser.add_argument(
+        '-f', '--force', action='store_true', help='强制覆盖已有文件')
+
     @with_argparser(risk_parser)
     def do_risk(self, args):
         if os.path.exists(self.apk_path + '.risk.txt'):
@@ -346,7 +345,7 @@ class CmdLineApp(Cmd):
 
         text += self.show_risk_code(level)
         text += self.show_risk_children()
-        # TODO save to file 
+        # TODO save to file
         self.ppaged(text)
         # so
         # 文本
@@ -448,6 +447,81 @@ class CmdLineApp(Cmd):
 
         # for item in sorted(list(classes)):
         #     print(item)
+
+    search_parser = argparse.ArgumentParser()
+    search_parser.add_argument('txt', help='默认在Dex中搜索字符串')
+    # <public type="string" name="failed_text" id="0x7f050002" />
+    search_parser.add_argument(
+        '-r', '--res', action='store_true', help='查找资源（id/name/图片名）')
+    search_parser.add_argument(
+        '-a', '--all', action='store_true', help='在所有文本文件中查找（不包含Dex）')
+
+    @with_argparser(search_parser)
+    def do_search(self, args):
+        def find_in_the_layout_xml(txt):
+            results = []
+            layout_path = os.path.join(self.apk_out, 'res', 'layout')
+            for root, _, names in os.walk(layout_path):
+                for name in names:
+                    xml_path = os.path.join(root, name)
+                    with open(xml_path, mode='r') as f:
+                        lines = f.readlines()
+                        for line in lines:
+                            if txt in line:
+                                results.append(os.path.splitext(name)[0])
+                                break
+            return results
+
+        def find_in_the_smali_dir(txt):
+            for smali_file in self.smali_dir:
+                if txt in smali_file.get_content():
+                    print(smali_file)
+
+        def find_in_the_txt(content):
+            self.apk.get_files().sort(key=lambda k: (k.get('type'), k.get('name')))
+            for item in self.apk.get_files():
+                if item.get('type') != 'txt':
+                    continue
+                if 'META-INF' in item.get('name'):
+                    continue
+                txt_path = os.path.join(self.apk_out, item.get('name'))
+                with open(txt_path, mode='r') as f:
+                    if 'txt_path' in f.read():
+                        print(item.get('name'))
+
+        if args.res:
+            public_xml = os.path.join(
+                self.apk_out, 'res', 'values', 'public.xml')
+            rtype = None
+            rname = None
+            with open(public_xml, mode='r') as f:
+                lines = f.readlines()
+                flag = False
+                for line in lines:
+                    if args.txt in line:
+                        match = line.strip()
+                        print(match)
+                        g = re.search(
+                            r'type="(.*?)" name="(.*?)"', match).groups()
+                        if g:
+                            rtype = g[0]
+                            rname = g[1]
+                        break
+                else:
+                    return
+
+            if rtype in {'string', 'layout'}:
+                find_in_the_smali_dir(rname)
+            elif rtype in {'id', 'drawable'}:
+                txts = find_in_the_layout_xml(rname)
+                for txt in txts:
+                    print(os.path.join('res', 'layout', txt + '.xml'))
+                    find_in_the_smali_dir(txt)
+                    print()
+        elif args.all:
+            find_in_the_txt(args.txt)
+        else:
+            find_in_the_smali_dir(args.txt)
 
     # ------------------- ADB -------------------------
     adb_parser = argparse.ArgumentParser()
@@ -596,7 +670,8 @@ class CmdLineApp(Cmd):
         '''
         # cmd = "strace -f -p `ps | grep zygote | awk '{print $2}'`"
         print(self.sdcard)
-        cmd = "set `ps | grep zygote`; strace -p $2 -f -tt -T -s 500 -o {}strace.txt".format(self.sdcard)
+        cmd = "set `ps | grep zygote`; strace -p $2 -f -tt -T -s 500 -o {}strace.txt".format(
+            self.sdcard)
         self.adb.run_shell_cmd(cmd)
 
     @with_argparser(startapp_parser)
@@ -851,4 +926,3 @@ if __name__ == '__main__':
     sys.argv.remove(args.f)
 
     CmdLineApp(args.f).cmdloop()
-
