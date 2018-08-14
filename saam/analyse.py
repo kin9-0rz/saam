@@ -88,7 +88,8 @@ class CmdLineApp(Cmd):
     def do_manifest(self, arg):
         '''显示清单信息'''
         org_xml = self.apk.get_org_manifest()
-        print(self.serialize_xml(org_xml))
+        if org_xml:
+            print(self.serialize_xml(org_xml))
 
     def get_package(self):
         return self.apk.get_manifest()['@package']
@@ -189,9 +190,12 @@ class CmdLineApp(Cmd):
         '''
         找出与清单相关的包
         '''
+        if not manifest:
+            return
         pkgs = set()
         ptn_s = r'android:name="([^\.]*?\.[^\.]*?)\..*?"'
         ptn = re.compile(ptn_s)
+
         for item in ptn.finditer(manifest):
             pkgs.add(item.groups()[0])
 
