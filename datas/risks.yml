@@ -7,7 +7,17 @@ SMS:
 DeviceAdmin:
   lvl: 3
   code:
-    - DeviceAdminReceiver
+    - 'DeviceAdminReceiver'
+WriteSecureSettings:
+  comment: APP需要系统权限
+  lvl: 3
+  code:
+    - 'Settings\$Secure;->put'
+Accessibility:
+  lvl: 2
+  code:
+    - 'AccessibilityService'
+    - 'enabled_accessibility_services'
 ROOT:
   lvl: 3
   code:
