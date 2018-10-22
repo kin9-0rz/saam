@@ -199,8 +199,10 @@ class CmdLineApp(Cmd):
         for item in ptn.finditer(manifest):
             pkgs.add(item.groups()[0])
 
-        pkgs.remove("android.intent")
-        pkgs.remove("android.permission")
+        if "android.intent" in pkgs:
+            pkgs.remove("android.intent")
+        if "android.permission" in pkgs:
+            pkgs.remove("android.permission")
 
         return pkgs
 
