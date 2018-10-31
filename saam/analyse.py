@@ -80,13 +80,20 @@ class CmdLineApp(Cmd):
     @staticmethod
     def serialize_xml(org_xml):
         import xmlformatter
-        org_xml = re.sub(r'>[^<]+<', '><', org_xml)
+        import xml
+        # org_xml = re.sub(r'>[^<]+<', '><', org_xml)
 
-        formatter = xmlformatter.Formatter()
-        return formatter.format_string(org_xml).decode('utf-8')
+        try:
+            formatter = xmlformatter.Formatter()
+            return formatter.format_string(org_xml).decode('utf-8')
+        except xml.parsers.expat.ExpatError:
+            return org_xml
 
     def do_manifest(self, arg):
         '''显示清单信息'''
+        # TODO 清单的显示形式更改
+        # 1. 分类显示，简单，默认
+        # 2. 原始XML的方式，有可能显示超过页面，需要使用more的方式。
         org_xml = self.apk.get_org_manifest()
         if org_xml:
             print(self.serialize_xml(org_xml))
@@ -638,11 +645,13 @@ class CmdLineApp(Cmd):
         '''
         安装应用到手机或模拟器
         '''
-        self.adb.run_cmd('install -r -f %s' % self.apk_path)
-        output = self.adb.get_output().decode().split()
+        self.adb.run_cmd('install -r -f {}'.format(self.apk_path))
+        output = self.adb.get_output().decode()
 
-        if output[-2] == 'Failure':
-            print(output[-1])
+        if self.adb.get_error():
+            print(self.adb.get_error().decode(errors='ignore'))
+        elif 'Failure' in output:
+            print(output)
         else:
             # TODO if the sdcard path doesn't exist.
             cmd = 'touch %s.now' % self.sdcard
