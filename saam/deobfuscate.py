@@ -1,6 +1,3 @@
-# apktool d -r apk
-# deobfuscate
-# apktool b apk
 import argparse
 import os
 
@@ -51,10 +48,11 @@ def deobfuscate(sdir):
         key = arr[0] + ';'
         name = '${}'.format(arr[1])
         new_desc = clzes[key][:-1] + name
-        # TODO 内部类名，还不能换其他名字
-        # print(desc, new_desc)
+        if not is_ascii(name):
+            new_desc = clzes[key][:-1] + '$InnerClass{};'.format(counter)
+            counter += 1
         smali_dir.update_desc(desc, new_desc)
-        counter += 1
+
     print(counter)
 
     print('methods ... ', end='')
@@ -66,7 +64,6 @@ def deobfuscate(sdir):
                 continue
             desc = sm.get_desc()
             sm.set_name('mtd{}'.format(counter))
-            # print(desc, sm.get_desc())
             smali_dir.update_desc(desc, sm.get_desc())
             counter += 1
     print(counter)
@@ -83,7 +80,6 @@ def deobfuscate(sdir):
             smali_dir.update_desc(desc, sfield.get_desc())
             counter += 1
     print(counter)
-    print('ok')
 
 
 def run(args):
