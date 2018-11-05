@@ -30,7 +30,6 @@ def build(app_path, force=False, output=None, frame_path=None):
 
     frame_path = ' -p ' + frame_path + ' ' if frame_path else ''
 
-    output = ' -o ' if output else ''
     if output:
         output = ' -o ' + output + ' '
     else:
