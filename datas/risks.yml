@@ -97,6 +97,9 @@ IO:
   code:
     - 'AssetManager;->open'
     - 'Stream;->write'
+    - 'File;->write'
+    - 'Writer;->write'
+    - 'Stream;->read'
     - 'Reader;->read'
 Natvie:
   lvl: 1
