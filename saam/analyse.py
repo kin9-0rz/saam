@@ -257,6 +257,7 @@ class CmdLineApp(Cmd):
         result = ''
         if not self.apk.get_manifest():
             return result
+
         risk_perms = [
             '_SMS',
             '_CALL',
@@ -266,7 +267,8 @@ class CmdLineApp(Cmd):
         ]
         ps = set()
         pflag = True
-        for item in self.apk.get_manifest().get('uses-permission', []):
+
+        def process_perm_item(item):
             for perm in risk_perms:
                 if perm not in item.get('@android:name'):
                     continue
@@ -281,8 +283,19 @@ class CmdLineApp(Cmd):
                 result += name + '\n'
                 ps.add(name)
 
+        perms = self.apk.get_manifest().get('uses-permission', [])
+
+        if isinstance(perms, dict):
+            process_perm_item(perms)
+        else:
+            for item in self.apk.get_manifest().get('uses-permission', []):
+                process_perm_item(item)
+
         app = self.apk.get_manifest().get('application')
-        recs = app.get('receiver')
+        if app is None:
+            return result
+
+        recs = app.get('receiver', None)
 
         def process_item(item):
             text = ''
