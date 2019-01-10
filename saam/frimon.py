@@ -94,11 +94,29 @@ def on_detached():
     print((colored('[WARNING] "%s" has terminated!' % (app_name), 'red')))
 
 
+ssl_key = {}
+
+
 def on_message(message, data):
     if message['type'] == 'send':
-        print(message['payload'])
+        result = message['payload']
+        if 'client_random' in result:
+            ssl_key[result['client_random']] = result['master_key']
+            if data:
+                import hexdump
+                hexdump.hexdump(data)
+        else:
+            print(result)
+
     elif message['type'] == 'error':
         print((message['stack']))
+
+
+def print_ssl_key():
+    print()
+    print('SSL KEY:')
+    for k, v in ssl_key.items():
+        print("CLIENT_RANDOM {} {}".format(k, v))
 
 
 def generate_injection():
@@ -197,6 +215,7 @@ try:
             if spawn == 1 and pid:
                 device.resume(pid)
 except Exception as e:
+    print_ssl_key()
     print((colored('[ERROR] ' + str(e), 'red')))
     traceback.print_exc()
     sys.exit(1)
@@ -205,6 +224,7 @@ try:
     while True:
         pass
 except KeyboardInterrupt:
+    print_ssl_key()
     script.unload()
     session.detach()
     _exit_()

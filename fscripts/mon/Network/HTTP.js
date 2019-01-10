@@ -22,6 +22,8 @@ var requestBody = "";
 var responseHeaders = "";
 var responseBody = "";
 
+
+
 Java.perform(function() {
   try {
     var HttpURLConnection = Java.use("com.android.okhttp.internal.http.HttpURLConnectionImpl");
@@ -89,7 +91,8 @@ Java.perform(function() {
       send(JSON.stringify(send_data));
 
       console.log(JSON.stringify(send_data));
-      console.log(Java.use("java.lang.Thread").currentThread().getStackTrace());
+      // console.log(Java.use("java.lang.Thread").currentThread().getStackTrace());
+      showStack();
 
       return stream;
     } catch (e) {
