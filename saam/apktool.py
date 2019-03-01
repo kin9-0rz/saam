@@ -4,7 +4,7 @@ import subprocess
 from . import APKTOOL_PATH
 
 
-def decode(framework, output, apk_path, force):
+def decode(framework, output, apk_path, force, no_res=False):
     if framework:
         framework = ' -p ' + framework + ' '
     else:
@@ -20,8 +20,13 @@ def decode(framework, output, apk_path, force):
     else:
         force = ''
 
+    if no_res:
+        no_res = ' -r '
+    else:
+        no_res = ''
+
     cmd = 'java -jar ' + APKTOOL_PATH + ' d ' + \
-        force + framework + output + apk_path
+        force + no_res + framework + output + apk_path
     subprocess.call(cmd, shell=True)
 
 

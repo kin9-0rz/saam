@@ -1,7 +1,6 @@
 import argparse
 import os
 
-import smafile
 from smafile import SmaliDir
 
 from . import apktool
@@ -18,8 +17,8 @@ def deobfuscate(sdir):
 
     smali_dir = SmaliDir(sdir, include=None, exclude=None)
 
-    old_clzs = []
-    old_mtds = []
+    # old_clzs = []
+    # old_mtds = []
     counter = 0
 
     print('classes ... ', end='')
@@ -30,13 +29,18 @@ def deobfuscate(sdir):
             continue
         if '$' in desc:
             continue
-        new_desc = desc[:desc.rindex('/') + 1] + 'Clazz{};'.format(counter)
+        # 如果类名存在/
+        if '/' in desc:
+            new_desc = desc[:desc.rindex('/') + 1] + 'Clazz{};'.format(counter)
+        else:
+            new_desc = 'LClazz{};'.format(counter)
         smali_dir.update_desc(desc, new_desc)
         clzes[desc] = new_desc
         counter += 1
     print(counter)
 
     print('inner classes ... ', end='')
+
     counter = 0
     for sf in smali_dir:
         desc = sf.get_class()
@@ -45,7 +49,15 @@ def deobfuscate(sdir):
         if '$' not in desc:
             continue
         arr = desc.split('$')
+        # 只处理只有一个$号的类
+        # TODO 子类的子类，暂时不处理
+        if len(arr) != 2:
+            continue
         key = arr[0] + ';'
+        if key not in clzes:
+            print('Not found ' + key)
+            continue
+
         name = '${}'.format(arr[1])
         new_desc = clzes[key][:-1] + name
         if not is_ascii(name):
@@ -85,7 +97,7 @@ def deobfuscate(sdir):
 def run(args):
     output = 'detmp'
     apktool.decode(framework=None, output=output,
-                   apk_path=args.apk, force=False)
+                   apk_path=args.apk, force=False, no_res=True)
 
     deobfuscate(os.path.join(output, 'smali'))
 

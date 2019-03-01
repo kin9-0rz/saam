@@ -268,14 +268,15 @@ class CmdLineApp(Cmd):
         ps = set()
         pflag = True
 
-        def process_perm_item(item):
+        def process_perm_item(item, pflagx = pflag):
+
             for perm in risk_perms:
                 if perm not in item.get('@android:name'):
                     continue
 
-                if pflag:
+                if pflagx:
                     result += Color.red('===== Risk Permissions =====\n')
-                    pflag = False
+                    pflagx = False
 
                 name = item.get('@android:name')
                 if name in ps:

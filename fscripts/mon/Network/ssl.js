@@ -1,6 +1,6 @@
 'use strict';
 
-var DEBUG = false;
+var DEBUG = true;
 
 var SDK = 0;
 var SSL_MAX_MASTER_KEY_LENGTH = 48;
