@@ -4,9 +4,10 @@ import os
 import re
 import sys
 
+import cmd2
 import pyadb3
 from apkutils import APK
-from cmd2 import Cmd, with_argparser
+from cmd2 import Cmd, argparse_completer, with_argparser
 from colorclass.color import Color
 from graphviz import Digraph
 from smafile import SmaliDir
@@ -41,6 +42,22 @@ class CmdLineApp(Cmd):
         self.smali_files = None
         self.smali_dir = None
         self.adb = None
+        self.smali_method_descs = []
+        self.java_files = []
+
+        vsmali_action = CmdLineApp.vsmali_parser.add_argument(
+            'sfile', help='smali file path')
+        setattr(vsmali_action, argparse_completer.ACTION_ARG_CHOICES,
+                ('delimiter_complete',
+                 {'delimiter': '/',
+                  'match_against': self.smali_method_descs}))
+
+        vjava_action = CmdLineApp.vjava_parser.add_argument(
+            'jfile', help='java file path')
+        setattr(vjava_action, argparse_completer.ACTION_ARG_CHOICES,
+                ('delimiter_complete',
+                 {'delimiter': '/',
+                  'match_against': self.java_files}))
 
     def do_quit_and_clean(self, arg):
         import shutil
@@ -177,6 +194,8 @@ class CmdLineApp(Cmd):
                 print(item.get('type'), item.get('name'))
 
     # ------------------- Static Analysis -------------------------
+    # TODO 默认使用了apktool反编译
+    # 转化为jar文件/默认解压为.class文件，cfr反编译工具会自行处理。
     def do_decompile(self, arg):
         '''
         使用apktool反编译apk, 默认初始化清单相关的包。
@@ -240,7 +259,11 @@ class CmdLineApp(Cmd):
                 self.smali_dir[len(self.smali_dir):] = sd
             else:
                 self.smali_dir = sd
-                print('初始化{0}个smali文件'.format(len(self.smali_dir)))
+                # print('初始化{0}个smali文件'.format(len(self.smali_dir)))
+
+        for items in self.smali_dir:
+            for mtd in items.get_methods():
+                self.file_list.append(mtd.get_desc())
 
         print('初始化{0}个smali文件'.format(len(self.smali_dir)))
 
@@ -268,7 +291,7 @@ class CmdLineApp(Cmd):
         ps = set()
         pflag = True
 
-        def process_perm_item(item, pflagx = pflag):
+        def process_perm_item(item, pflagx=pflag):
 
             for perm in risk_perms:
                 if perm not in item.get('@android:name'):
@@ -549,6 +572,75 @@ class CmdLineApp(Cmd):
             find_in_the_txt(args.txt)
         else:
             find_in_the_smali_dir(args.txt)
+
+    vjava_parser = argparse_completer.ACArgumentParser(prog='vjava')
+
+    def do_dex2java(self, args):
+        """将APK转化为Java代码，使用vjava可以查看。
+        """
+        from .decompiler.enjarify import dex2jar
+        output = os.path.join(self.apk_out, 'classes.jar')
+        dex2jar(self.apk_path, output=output)
+       
+        from .decompiler.cfr import class2java
+        java_output = os.path.join(self.apk_out, 'java')
+        print(java_output)
+        class2java(output, java_output)
+
+    def do_init_java(self, args):
+        java_output = os.path.join(self.apk_out, 'java')
+        for root, dirs, files in os.walk(java_output):
+            for d in dirs:
+                for f in files:
+                    self.java_files.append(os.path.join(root, d, f))
+
+    vjava_parser = argparse_completer.ACArgumentParser(prog='vjava')
+
+    @cmd2.with_argparser(vjava_parser)
+    def do_vjava(self, args):
+        """查看java代码，可以指定类、方法
+
+        Args:
+            args (TYPE): 类、方法
+        """
+        # TODO 封装cfr
+        # TODO 修改apktutils的反编译接口
+        if not self.java_files:
+            print('please dex2jar and init java')
+            return
+
+        try:
+            with open(args.jfile) as f:
+                print(f.read())
+        except Exception as e:
+            pass
+
+    vsmali_parser = argparse_completer.ACArgumentParser(prog='vsmali')
+
+    # @cmd2.with_category('CAT_AUTOCOMPLETE')
+    @cmd2.with_argparser(vsmali_parser)
+    def do_vsmali(self, args):
+        """查看smali代码，可以指定类、方法
+        Args:
+            args (TYPE): 类、方法（自动生成）
+        """
+        # TODO 判断smali目录是否为空
+        # 如果为空，直接提示，请反编译
+        if not self.smali_dir:
+            print('please decompile and init smali')
+            return
+
+        try:
+            print(self.smali_dir.get_method_from_desc(args.sfile).get_body())
+        except Exception as e:
+            pass
+
+        # for item in self.smali_dir:
+        #     print(dir(item))
+        #     print(item.get_file_path(), item.get_class(), item.get_methods())
+        # for item in self.smali_files:
+            # print(item)
+        #
 
     # ------------------- ADB -------------------------
     adb_parser = argparse.ArgumentParser()
