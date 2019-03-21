@@ -25,6 +25,7 @@ def compile_yara_rules():
     rules = yara.compile(filepaths=yara_files)
     rules.save(YARAC_PATH)
 
+
 def get_rules():
     return yara.load(YARAC_PATH)
 
@@ -58,7 +59,7 @@ def scan_apk(apk_path, rules, timeout):
 
     except Exception as e:
         print(e)
-    
+
     from apkutils import APK
     txt = APK(apk_path).get_org_manifest()
     match_dict = scan_manifest(txt, rules, timeout)
@@ -66,15 +67,16 @@ def scan_apk(apk_path, rules, timeout):
         key_path = '{}!{}'.format(apk_path, 'AndroidManifest.xml')
         print_matches(key_path, match_dict)
 
+
 def scan_manifest(txt, rules, timeout):
     matches = rules.match(data=txt, timeout=timeout)
     return build_match_dict(matches)
 
 
-
 def do_yara(file_path, rules, timeout):
     matches = rules.match(file_path, timeout=timeout)
     return build_match_dict(matches)
+
 
 def print_matches(key_path, match_dict):
     ''' example matches dict
@@ -91,6 +93,7 @@ def print_matches(key_path, match_dict):
     for tags in sorted(match_dict):
         values = ', '.join(sorted(match_dict[tags]))
         print(" |-> {} : {}".format(tags, values))
+
 
 def scan(file_path, rules, timeout):
     file_type = Magic(file_path).get_type()
@@ -125,6 +128,7 @@ def main(args):
 
 # TODO 对于清单的匹配，直接使用apkutils取出来匹配即可
 # 如果是这样，那么dex直接拿自付出出来，直接匹配？
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(

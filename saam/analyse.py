@@ -263,7 +263,7 @@ class CmdLineApp(Cmd):
 
         for items in self.smali_dir:
             for mtd in items.get_methods():
-                self.file_list.append(mtd.get_desc())
+                self.smali_method_descs.append(mtd.get_desc())
 
         print('初始化{0}个smali文件'.format(len(self.smali_dir)))
 
@@ -581,7 +581,7 @@ class CmdLineApp(Cmd):
         from .decompiler.enjarify import dex2jar
         output = os.path.join(self.apk_out, 'classes.jar')
         dex2jar(self.apk_path, output=output)
-       
+
         from .decompiler.cfr import class2java
         java_output = os.path.join(self.apk_out, 'java')
         print(java_output)

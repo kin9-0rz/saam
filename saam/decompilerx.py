@@ -32,7 +32,7 @@ def baksmali(flag, file_path, framework=None, output=None):
         output = ' -o ' + output
     else:
         output = ''
-    cmd = 'java -jar %s %s %s%s%s' %
+    cmd = 'java -jar %s %s %s %s %s' %
         (baksmali_path, flag, framework, file_path, output)
     subprocess.call(cmd, shell=True)
 

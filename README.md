@@ -12,12 +12,13 @@
   pip install -r requirements.txt
   ```
 
-2. 安装yara-python
+2. 安装yara, yara-python
+  先安装[yara](https://github.com/VirusTotal/yara)，再安装yara-python。
 
   ```
-  git clone --recursive https://github.com/rednaga/yara-python-1 yara-python
-  cd yara-python
-  python setup.py build --enable-dex install
+  $ git clone --recursive https://github.com/rednaga/yara-python-1 yara-python
+  $ cd yara-python
+  $ python setup.py build --enable-dex install
   ```
 
 3. readline
