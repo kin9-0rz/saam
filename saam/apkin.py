@@ -187,6 +187,30 @@ class APK_Intersection:
             print("    '{}',  # {}".format(md5, ftree.get(md5)))
         print(']')
 
+    def intersect_apis(self):
+        for apk in self.apks:
+            # print(apk.get_strings_refx())
+            print(apk.get_methods_refx())
+            return
+
+    def intersect_resources(self):
+        flag1 = True
+        files = set()
+        for apk in self.apks:
+            if flag1:
+                for item in apk.get_files():
+                    files.add(item.get('name'))
+                flag1 = False
+                continue
+            tmps = set()
+            for item in apk.get_files():
+                tmps.add(item.get('name'))
+            files = files & tmps
+        print('res = [')
+        for item in sorted(files):
+            print("    '{}',".format(item))
+        print(']')
+
 
 def main(args):
     if os.path.isfile(args.file):
@@ -226,6 +250,12 @@ def main(args):
     if args.t:
         ai.intersect_dex_tree()
 
+    if args.p:
+        ai.intersect_apis()
+
+    if args.r:
+        ai.intersect_resources()
+
 
 if __name__ == "__main__":
     import argparse
@@ -237,5 +267,6 @@ if __name__ == "__main__":
     parser.add_argument('-r', action='store_true', help='Resource')
     parser.add_argument('-t', action='store_true', help='结构')
     parser.add_argument('-T', help='根据节点md5，查找结构')
+    parser.add_argument('-p', help='统计API的使用数量')
 
     main(parser.parse_args())
