@@ -2,7 +2,7 @@ cmd2
 graphviz
 pyadb3
 cigam
-smafile>=0.4.2
+smafile
 apkutils
 colorclass
 xmlformatter
