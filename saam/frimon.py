@@ -8,6 +8,7 @@ import tempfile
 import traceback
 
 import frida
+import hexdump
 from termcolor import colored
 
 VERSION = '0.0.1'
@@ -103,7 +104,6 @@ def on_message(message, data):
         if 'client_random' in result:
             ssl_key[result['client_random']] = result['master_key']
             if data:
-                import hexdump
                 hexdump.hexdump(data)
         else:
             print(result)
