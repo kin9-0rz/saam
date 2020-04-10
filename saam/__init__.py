@@ -27,7 +27,7 @@ CFR_PATH = __CFR_CONF if __CFR_CONF else __CFR_DEFAULT
 
 RISKS_PATH = os.path.join(HOME, 'datas', 'risks.yml')
 with open(RISKS_PATH, encoding='utf-8') as f:
-    RISKS = yaml.load(f.read())
+    RISKS = yaml.full_load(f.read())
 
 YARA_PATH = os.path.join(HOME, 'rules')
 YARAC_PATH = os.path.join(HOME, 'rules', 'rules.yarc')

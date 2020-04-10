@@ -1,4 +1,4 @@
-cmd2
+cmd2 == 0.9.11
 graphviz
 pyadb3
 cigam
@@ -10,6 +10,6 @@ PyYAML
 termcolor
 colorama >= 0.2.7, < 1.0.0
 frida >= 12.8.12, < 13.0.0
-prompt-toolkit >= 3.0.3, < 4.0.0
+prompt_toolkit
 pygments >= 2.0.2, < 3.0.0
 hexdump
